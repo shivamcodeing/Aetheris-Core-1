@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZENO AI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #131314; color: #e3e3e3; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Header */
+        .header { padding: 20px; text-align: center; font-size: 24px; font-weight: bold; background-color: #1e1f22; border-bottom: 1px solid #333; color: #a8c7fa; }
+        
+        /* Chat Area */
+        .chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%; }
+        
+        .message { max-width: 80%; line-height: 1.5; padding: 12px 16px; border-radius: 12px; font-size: 16px; }
+        .user-message { background-color: #303134; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ai-message { background-color: #1e1f22; color: #e3e3e3; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #333; }
+        
+        /* Loading Animation */
+        .loading { font-style: italic; color: #888; font-size: 14px; align-self: flex-start; display: none; }
+        
+        /* Input Area */
+        .input-area { padding: 20px; background-color: #131314; display: flex; justify-content: center; border-top: 1px solid #333; }
+        .input-box { display: flex; width: 100%; max-width: 800px; background-color: #1e1f22; border-radius: 24px; padding: 5px 10px; border: 1px solid #444; }
+        .input-box input { flex: 1; background: transparent; border: none; color: white; padding: 15px; font-size: 16px; outline: none; }
+        .input-box button { background-color: #a8c7fa; color: #131314; border: none; border-radius: 50%; width: 45px; height: 45px; margin-top: 2px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .input-box button:hover { background-color: #8ab4f8; }
+    </style>
+</head>
+<body>
+
+    <div class="header">✨ ZENO AI</div>
+
+    <div class="chat-container" id="chat-box">
+        <div class="message ai-message">Hello Shivendra! I am Zeno AI. How can I help you today?</div>
+    </div>
+    
+    <div class="loading" id="loading-text">Zeno is thinking...</div>
+
+    <div class="input-area">
+        <div class="input-box">
+            <input type="text" id="user-input" placeholder="Ask Zeno anything..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ यहाँ अपनी Hugging Face की API Key डालें
+        const HF_API_KEY = "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"; 
+        
+        // अभी हम HF का बेस gpt2 यूज़ कर रहे हैं। जब तुम्हारा 500M बन जाए, तो यहाँ अपने मॉडल का लिंक डाल देना।
+        const API_URL = "https://api-inference.huggingface.co/models/gpt2";
+
+        async function sendMessage() {
+            const inputField = document.getElementById("user-input");
+            const userText = inputField.value.trim();
+            if (!userText) return;
+
+            appendMessage(userText, "user-message");
+            inputField.value = "";
+            document.getElementById("loading-text").style.display = "block";
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${HF_API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        inputs: userText,
+                        parameters: {
+                            max_new_tokens: 150,
+                            repetition_penalty: 1.2, // 🪄 यही वो जादू है जो लूपिंग (बार-बार एक बात बोलना) रोकेगा
+                            temperature: 0.7,
+                            return_full_text: false
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById("loading-text").style.display = "none";
+
+                if (data.error) {
+                    appendMessage("Error: " + data.error, "ai-message");
+                } else {
+                    let aiText = data[0].generated_text.trim();
+                    appendMessage(aiText, "ai-message");
+                }
+            } catch (error) {
+                document.getElementById("loading-text").style.display = "none";
+                appendMessage("Connection Failed. Please check API Key.", "ai-message");
+            }
+        }
+
+        function appendMessage(text, className) {
+            const chatBox = document.getElementById("chat-box");
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `message ${className}`;
+            messageDiv.innerText = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") sendMessage();
+        }
+    </script>
+</body>
+</html>
